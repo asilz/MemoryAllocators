@@ -27,10 +27,10 @@ public:
     ~PoolAllocator();
 };
 
-template <size_t elementCap>
-ssize_t getFirstUnset(std::bitset<elementCap> &set)
+template <size_t bitCount>
+constexpr ssize_t getFirstUnset(const std::bitset<bitCount> &set)
 {
-    for (size_t i = 0; i < elementCap; ++i)
+    for (size_t i = 0; i < bitCount; ++i)
     {
         if (set[i] == false)
         {
@@ -50,22 +50,21 @@ T *PoolAllocator<T, elementCap>::alloc(Args &&...args)
         return nullptr;
     }
     allocMap[index] = true;
-    T *obj = new (&buf[index * sizeof(T)]) T(args...);
+    T *obj = new (&buf[index * sizeof(T)]) T(std::forward<Args>(args)...);
     return obj;
 }
 
 template <class T, size_t elementCap>
 void PoolAllocator<T, elementCap>::free(T *ptr)
 {
-    uintptr_t index = ((uintptr_t)(ptr - (T *)buf)) / sizeof(T);
+    uintptr_t index = ((uintptr_t)(ptr - reinterpret_cast<T *>(buf))) / sizeof(T);
     allocMap[index] = false;
     ptr->~T();
 }
 
 template <class T, size_t elementCap>
-PoolAllocator<T, elementCap>::PoolAllocator()
+PoolAllocator<T, elementCap>::PoolAllocator() : allocMap(std::bitset<elementCap>())
 {
-    allocMap.reset();
 }
 
 template <class T, size_t elementCap>
