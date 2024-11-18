@@ -50,7 +50,7 @@ T *PoolAllocator<T, capacity>::alloc(Args &&...args)
         return nullptr;
     }
     allocMap[index] = true;
-    T *obj = new (&buf[index]) T(std::forward<Args>(args)...);
+    T *obj = new (&buf[index * sizeof(T)]) T(std::forward<Args>(args)...);
     return obj;
 }
 
@@ -74,7 +74,7 @@ PoolAllocator<T, capacity>::~PoolAllocator()
     {
         if (allocMap[i])
         {
-            T *obj = reinterpret_cast<T *>(&buf[i]);
+            T *obj = reinterpret_cast<T *>(&buf[i * sizeof(T)]);
             obj->~T();
         }
     }
