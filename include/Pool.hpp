@@ -12,12 +12,12 @@ struct TreeNode
     ~TreeNode() { printf("deleted!\n"); };
 };
 
-template <class T, size_t elementCap>
+template <class T, size_t capacity>
 class PoolAllocator
 {
 private:
-    std::bitset<elementCap> allocMap;
-    std::byte buf[elementCap * sizeof(T)];
+    std::bitset<capacity> allocMap;
+    std::byte buf[capacity * sizeof(T)];
 
 public:
     template <typename... Args>
@@ -40,9 +40,9 @@ constexpr ssize_t getFirstUnset(const std::bitset<bitCount> &set)
     return -ENOMEM;
 }
 
-template <class T, size_t elementCap>
+template <class T, size_t capacity>
 template <typename... Args>
-T *PoolAllocator<T, elementCap>::alloc(Args &&...args)
+T *PoolAllocator<T, capacity>::alloc(Args &&...args)
 {
     ssize_t index = getFirstUnset(allocMap);
     if (index < 0)
@@ -50,31 +50,31 @@ T *PoolAllocator<T, elementCap>::alloc(Args &&...args)
         return nullptr;
     }
     allocMap[index] = true;
-    T *obj = new (&buf[index * sizeof(T)]) T(std::forward<Args>(args)...);
+    T *obj = new (&buf[index]) T(std::forward<Args>(args)...);
     return obj;
 }
 
-template <class T, size_t elementCap>
-void PoolAllocator<T, elementCap>::free(T *ptr)
+template <class T, size_t capacity>
+void PoolAllocator<T, capacity>::free(T *ptr)
 {
     uintptr_t index = ((uintptr_t)(ptr - reinterpret_cast<T *>(buf))) / sizeof(T);
     allocMap[index] = false;
     ptr->~T();
 }
 
-template <class T, size_t elementCap>
-PoolAllocator<T, elementCap>::PoolAllocator() : allocMap(std::bitset<elementCap>())
+template <class T, size_t capacity>
+PoolAllocator<T, capacity>::PoolAllocator() : allocMap(std::bitset<capacity>())
 {
 }
 
-template <class T, size_t elementCap>
-PoolAllocator<T, elementCap>::~PoolAllocator()
+template <class T, size_t capacity>
+PoolAllocator<T, capacity>::~PoolAllocator()
 {
-    for (size_t i = 0; i < elementCap; ++i)
+    for (size_t i = 0; i < capacity; ++i)
     {
         if (allocMap[i])
         {
-            T *obj = reinterpret_cast<T *>(&buf[i * sizeof(T)]);
+            T *obj = reinterpret_cast<T *>(&buf[i]);
             obj->~T();
         }
     }
